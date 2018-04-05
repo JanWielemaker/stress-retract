@@ -1,22 +1,27 @@
 :- use_module(library(lists)).
 :- use_module(library(apply)).
+:- use_module(library(random)).
 
 :- dynamic
 	a/1,
 	complete/0.
 
-test(Threads, Length) :-
+test(Threads, QThreads, Length) :-
 	numlist(0, Length, List),
 	sum_list(List, Sum),
 	thread_self(Me),
 	length(TIDS, Threads),
 	maplist(thread_create(collect(Me, Length)), TIDS),
+	length(QTIDS, QThreads),
+	maplist(thread_create(query(Length)), QTIDS),
 	forall(between(0, Length, X),
 	       ( term(X, T),
 		 assertz(a(T)))),
 	setup_call_cleanup(
 	    asserta(complete),
-	    maplist(thread_join, TIDS),
+	    (	maplist(thread_join, TIDS),
+		maplist(thread_join, QTIDS)
+	    ),
 	    retractall(complete)),
 	findall(C, ( between(1, Threads, _),
 		     thread_get_message(collected(C))
@@ -49,6 +54,15 @@ collect1(I, End, N0, N) :-
 	I2 is I+1,
 	collect1(I2, End, N1, N).
 collect1(_, _, N, N).
+
+query(Length) :-
+	random_between(0, Length, I),
+	term(I, Term),
+	ignore(a(Term)),
+	(   complete
+	->  true
+	;   query(Length)
+	).
 
 term(N, x(N)) :- N mod  5 =:= 0, !.
 term(N, y(N)) :- N mod 13 =:= 0, !.
