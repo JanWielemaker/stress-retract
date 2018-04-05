@@ -6,7 +6,7 @@ length=$2
 
 SRC="tops.pl retract.pl pagc.pl pcgc.pl"
 
-while taskset 6 swipl -O -g "with_cgc(test($threads, $length),50)" -t halt $SRC; do
+while swipl -O -g "with_cgc(test($threads, $length),50)" -t halt $SRC; do
 echo "### run $run at `date` ###"
 run=$(($run+1))
 done
