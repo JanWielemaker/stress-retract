@@ -1,23 +1,19 @@
-loop(0) :- !.
-loop(N) :-
-	test, put_char(user_error, .),
-	N2 is N - 1,
-	loop(N2).
+:- use_module(library(lists)).
+:- use_module(library(apply)).
 
-test :-
-	N = 10000,
-	numlist(0, N, List),
+test(Threads, Length) :-
+	numlist(0, Length, List),
 	sum_list(List, Sum),
-	forall(between(0, N, X),
+	forall(between(0, Length, X),
 	       assertz(a(X))),
 	thread_self(Me),
-	thread_create(collect(Me), Id1, []),
-	thread_create(collect(Me), Id2, []),
-	thread_join(Id1, true),
-	thread_join(Id2, true),
-	thread_get_message(collected(N1)),
-	thread_get_message(collected(N2)),
-	ConcurrentSum is N1+N2,
+	length(TIDS, Threads),
+	maplist(thread_create(collect(Me)), TIDS),
+	maplist(thread_join, TIDS),
+	findall(C, ( between(1, Threads, _),
+		     thread_get_message(collected(C))
+		   ), CL),
+	sum_list(CL, ConcurrentSum),
 	(   Sum == ConcurrentSum
 	->  true
 	;   format('~D \\== ~D~n', [Sum, ConcurrentSum]),
